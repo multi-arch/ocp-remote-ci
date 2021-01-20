@@ -1,14 +1,16 @@
 [Unit]
 Description=API CI
 After=network.target
+Wants=network.target
 
 [Service]
 Type=simple
-# Another Type: forking
 WorkingDirectory=/home/bastion
-ExecStart=/home/bastion/tunnel.sh
-Restart=on-failure
-# Other restart options: always, on-abort, etc
+ExecStart=/bin/bash /home/bastion/tunnel.sh
+Restart=always
+RestartSec=3
+StandardOutput=append:/var/log/tunnel.log
+StandardError=append:/var/log/tunnel.log
 
 # The install section is needed to use
 # `systemctl enable` to start on boot

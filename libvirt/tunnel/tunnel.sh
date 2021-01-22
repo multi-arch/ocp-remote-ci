@@ -1,36 +1,62 @@
 #!/bin/bash
 # Load profile vars
-. profile_s390x.sh
-. profile_ppc64le.sh
+
+if [[ ! -f profile.sh ]]; then
+	echo "Profile.sh file missing"
+fi
+
+. profile.sh
 
 set -o nounset
 set -o pipefail
 set -o errexit
 
-# Number of clusters that can run on this host
-echo "$CLUSTER_CAPACITY"
-
-# Bastion name & credentials
-echo "$ENVIRONMENT"
-environment=$ENVIRONMENT
-token=$TOKEN
-
 # Default Ports
-libvirt_port=16509
-api_port=6443
-http_port=80
-https_port=443
+LIBVIRT_PORT=16509
+API_PORT=6443
+HTTP_PORT=80
+HTTPS_PORT=443
 
 # Debug and verify input
-if [[ -z "${token:-}" ]]; then
+if [[ -z "${TOKEN:-}" ]]; then
 	echo "[FATAL] \${token} must be set to the credentials of the port-forwarder service account."
 	exit 1
-elif [[ -z "${environment:-}" ]]; then
+elif [[ -z "${ENVIRONMENT:-}" ]]; then
 	echo "[FATAL] \${environment} must be set to specify which bastion to interact with."
+	exit 1
+elif [[ -z "${CLUSTER_CAPACITY:-}" ]]; then
+	echo "[FATAL] \${CLUSTER_CAPACITY} must be set to specify cluster capacity."
+	exit 1
+elif [[ -z "${CLUSTER_ID:-}" ]]; then
+	echo "[FATAL] \${CLUSTER_ID} must be set to specify cluster."
 	exit 1
 fi
 
-function OC() {	./oc --server https://api.ci.openshift.org --token "${token}" --namespace "${environment}" "${@}"
+# Declaring and setting Bastion and Local ports
+declare -A BASTION_PORTS
+declare -A LOCAL_PORTS
+BASTION_PORTS["LIBVIRT"]=$(($LIBVIRT_PORT + $CLUSTER_ID))
+BASTION_PORTS["0,API"]=$(($API_PORT + $CLUSTER_ID))
+BASTION_PORTS["0,HTTP"]=$(($HTTP_PORT + $CLUSTER_ID + 8000))
+BASTION_PORTS["0,HTTPS"]=$(($HTTPS_PORT + $CLUSTER_ID + 8000))
+PORTS="-R ${BASTION_PORTS["LIBVIRT"]}:127.0.0.1:$LIBVIRT_PORT \
+       -R ${BASTION_PORTS["0,API"]}:127.0.0.1:$(($API_PORT + 80000)) \
+	   -R ${BASTION_PORTS["0,HTTP"]}:127.0.0.1:$(($HTTP_PORT + 80000)) \
+	   -R ${BASTION_PORTS["0,HTTPS"]}:127.0.0.1:$(($HTTPS_PORT + 80000))"
+for i in $(seq 1 $CLUSTER_CAPACITY); do
+        BASTION_PORTS["$i,API"]=$(($API_PORT + $CLUSTER_ID + 10000 * $i))
+        BASTION_PORTS["$i,HTTP"]=$(($HTTP_PORT + $CLUSTER_ID + 10000 * $i))
+        BASTION_PORTS["$i,HTTPS"]=$(($HTTPS_PORT + $CLUSTER_ID + 10000 * $i))
+		LOCAL_PORTS["$i,API"]=$(($API_PORT + 10000 * $i))
+		LOCAL_PORTS["$i,HTTP"]=$(($HTTP_PORT + 10000 * $i))
+		LOCAL_PORTS["$i,HTTPS"]=$(($HTTPS_PORT + 10000 * $i))
+		PORTS+=" -R ${BASTION_PORTS["$i,API"]}:127.0.0.1:${LOCAL_PORTS["$i,API"]}
+				 -R ${BASTION_PORTS["$i,HTTP"]}:127.0.0.1:${LOCAL_PORTS["$i,HTTP"]}
+				 -R ${BASTION_PORTS["$i,HTTPS"]}:127.0.0.1:${LOCAL_PORTS["$i,HTTPS"]}"
+done
+
+function OC() {	
+	./oc --server https://api.ci.openshift.org --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
 }
 
 function timestamp() {
@@ -50,43 +76,14 @@ function port-forward() {
 }
 
 # This opens an ssh tunnel. It uses port 2222 for the ssh traffic.
-# It basically says send traffic from bastion service port $1 to
-# local VM port $1 using port 2222 to establish the ssh connection.
+# It basically says send traffic from bastion service port to
+# local VM port using port 2222 to establish the ssh connection.
 function ssh-tunnel() {
 	while true; do
-		echo "$(timestamp) [INFO] Setting up a reverse SSH tunnel to connect bastion port "${1:?Bastion service port was not specified}" to VM port "${1:?VM port was not specified}"..."
-		if ! ssh -N -T root@127.0.0.1 -p 2222 -R "$1:127.0.0.1:$1"; then
+		echo "$(timestamp) [INFO] Setting up a reverse SSH tunnel to connect bastion port "${1:?Bastion service port and local service port was not specified}"..."
+		if ! ssh -N -T root@127.0.0.1 -p 2222 $1; then
 			echo "$(timestamp) [WARNING] SSH tunnelling failed, retrying..."
 			sleep 0.1
-		fi
-	done
-}
-
-# This isn't used right now, but it allows forwarding udp traffic,
-# which is what ipmi uses. It forwards from local port $1 to host
-# $2 port 623. It is important that firewalld is configured on $2
-# to allow incoming udp traffic connections. This would mean running
-# something like `firewall-cmd --add-port=623/udp`
-function socat-udp-forward() {
-	while true; do
-		echo "[INFO] Forwarding udp traffic from localhost $1 to external host"
-		if ! socat udp4-recvfrom:"${1:?Local port not specified}",fork,reuseaddr udp4-sendto:"${2:?External host not specified}":623; then
-			echo "[WARNING] socat udp port forward failed"
-			exit 1
-		fi
-	done
-}
-
-# This forwards tcp traffic from local port $1 to remote host
-# $2 on port $3. It is important that firewalld is configured on $2
-# to allow incoming tcp traffic connections. This would mean running
-# something like `firewall-cmd --add-port=$3/tcp`
-function socat-tcp-forward() {
-	while true; do
-		echo "[INFO] Forwarding tcp traffic from localhost $1 to external host"
-		if ! socat tcp-listen:"${1:?Local port not specified}",fork,reuseaddr tcp:"${2:?External host not specified}":"${3:?Remote port not specified}"; then
-			echo "[WARNING] socat tcp port forward failed"
-			exit 1
 		fi
 	done
 }
@@ -116,28 +113,13 @@ while true; do
 	PID_PORT=$!
 
 	# without a better synchonization library, we just need to wait for the port-forward to run
-	sleep 10s
+	sleep 5s
 
-# ${BASTION_PORTS["LIBVIRT"]}:127.0.0.1:16509 \
-# ${CLUSTER_PORTS["0,API"]}:127.0.0.1:6443   ${CLUSTER_PORTS["0,HTTP"]}:127.0.0.1:80    ${CLUSTER_PORTS["0,HTTPS"]}:127.0.0.1:443 \
-# ${CLUSTER_PORTS["1,API"]}:127.0.0.1:16443  ${CLUSTER_PORTS["1,HTTP"]}:127.0.0.1:10080 ${CLUSTER_PORTS["1,HTTPS"]}:127.0.0.1:10443 \
-# ${CLUSTER_PORTS["2,API"]}:127.0.0.1:26443  ${CLUSTER_PORTS["2,HTTP"]}:127.0.0.1:20080 ${CLUSTER_PORTS["2,HTTPS"]}:127.0.0.1:20443 \
-# ${CLUSTER_PORTS["3,API"]}:127.0.0.1:36443  ${CLUSTER_PORTS["3,HTTP"]}:127.0.0.1:30080 ${CLUSTER_PORTS["3,HTTPS"]}:127.0.0.1:30443 \
-# ${CLUSTER_PORTS["4,API"]}:127.0.0.1:46443  ${CLUSTER_PORTS["4,HTTP"]}:127.0.0.1:40080 ${CLUSTER_PORTS["4,HTTPS"]}:127.0.0.1:40443 \
-
-	# run an SSH tunnel from the port $1 on the SSH bastion (through local port 2222) to local port $1
-	ssh-tunnel 16509 &
-	for i in $(seq 0 $CLUSTER_CAPACITY); do
-	    port=$(( 6443 + $i * (10000) ))
-		ssh-tunnel $port &
-		port=$(( 80 + $i * (10000) ))
-		ssh-tunnel $port &
-        port=$(( 443 + $i * (10000) ))
-		ssh-tunnel $port &
-    done
+	# run an SSH tunnel from the port on the SSH bastion (through local port 2222) to local port 
+	ssh-tunnel ${PORTS} &
 
 	PID_SSH=$!
-	sleep 10s
+	sleep 5s
 	while true; do
 		if pid-exists ${PID_PORT} && pid-exists ${PID_SSH}; then
 			echo "$(timestamp) *** [INFO] Everyone up" >> tunnel.log
@@ -155,9 +137,6 @@ while true; do
 	done
 
 done
-
-# setup socat port forwarding for connections to vm oc cluster
-# socat-tcp-forward ${port} ${vm} ${port} &
 
 for job in $( jobs -p ); do
 	wait "${job}"

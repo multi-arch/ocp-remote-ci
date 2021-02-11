@@ -1,21 +1,21 @@
 #!/bin/bash
 # Load profile vars
 
-if [[ ! -f profile.sh ]]; then
-	echo "Profile.sh file missing"
+if [[ ! -f profile_${HOSTNAME}.yaml ]]; then
+	echo "profile_${HOSTNAME}.yaml file missing"
+	exit 0
 fi
-
-. profile.sh
+filename=profile_${HOSTNAME}.yaml #HOSTNAME
 
 set -o nounset
 set -o pipefail
 set -o errexit
 
-# Default Ports
-LIBVIRT_PORT=16509
-API_PORT=6443
-HTTP_PORT=80
-HTTPS_PORT=443
+ARCH=$(yq eval '.profile.arch' ${filename})
+CLUSTER_CAPACITY=$(yq eval '.profile.cluster_capacity' ${filename})
+CLUSTER_ID=$(yq eval '.profile.cluster_id' ${filename})
+ENVIRONMENT=$(yq eval '.profile.environment' ${filename})
+TOKEN=$(yq eval '.profile.token' ${filename})
 
 # Debug and verify input
 if [[ -z "${TOKEN:-}" ]]; then
@@ -33,27 +33,13 @@ elif [[ -z "${CLUSTER_ID:-}" ]]; then
 fi
 
 # Declaring and setting Bastion and Local ports
-declare -A BASTION_PORTS
-declare -A LOCAL_PORTS
-BASTION_PORTS["LIBVIRT"]=$(($LIBVIRT_PORT + $CLUSTER_ID))
-BASTION_PORTS["0,API"]=$(($API_PORT + $CLUSTER_ID))
-BASTION_PORTS["0,HTTP"]=$(($HTTP_PORT + $CLUSTER_ID + 8000))
-BASTION_PORTS["0,HTTPS"]=$(($HTTPS_PORT + $CLUSTER_ID + 8000))
-PORTS="-R ${BASTION_PORTS["LIBVIRT"]}:127.0.0.1:$LIBVIRT_PORT \
-       -R ${BASTION_PORTS["0,API"]}:127.0.0.1:$(($API_PORT + 80000)) \
-	   -R ${BASTION_PORTS["0,HTTP"]}:127.0.0.1:$(($HTTP_PORT + 80000)) \
-	   -R ${BASTION_PORTS["0,HTTPS"]}:127.0.0.1:$(($HTTPS_PORT + 80000))"
-for i in $(seq 1 $CLUSTER_CAPACITY); do
-        BASTION_PORTS["$i,API"]=$(($API_PORT + $CLUSTER_ID + 10000 * $i))
-        BASTION_PORTS["$i,HTTP"]=$(($HTTP_PORT + $CLUSTER_ID + 10000 * $i))
-        BASTION_PORTS["$i,HTTPS"]=$(($HTTPS_PORT + $CLUSTER_ID + 10000 * $i))
-		LOCAL_PORTS["$i,API"]=$(($API_PORT + 10000 * $i))
-		LOCAL_PORTS["$i,HTTP"]=$(($HTTP_PORT + 10000 * $i))
-		LOCAL_PORTS["$i,HTTPS"]=$(($HTTPS_PORT + 10000 * $i))
-		PORTS+=" -R ${BASTION_PORTS["$i,API"]}:127.0.0.1:${LOCAL_PORTS["$i,API"]}
-				 -R ${BASTION_PORTS["$i,HTTP"]}:127.0.0.1:${LOCAL_PORTS["$i,HTTP"]}
-				 -R ${BASTION_PORTS["$i,HTTPS"]}:127.0.0.1:${LOCAL_PORTS["$i,HTTPS"]}"
+PORTS="-R $(yq eval '.libvirt.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt.target-port' ${filename})"
+for i in $(seq 0 $(( $CLUSTER_CAPACITY-1 )) ); do
+		PORTS+=" -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.api.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.api.target-port' ${filename}) 
+				 -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.target-port' ${filename}) 
+				 -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.target-port' ${filename}) "
 done
+# echo ${PORTS}
 
 function OC() {	
 	./oc --server https://api.ci.openshift.org --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"

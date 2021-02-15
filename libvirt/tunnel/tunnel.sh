@@ -1,5 +1,4 @@
 #!/bin/bash
-# Load profile vars
 
 if [[ ! -f profile_${HOSTNAME}.yaml ]]; then
 	echo "profile_${HOSTNAME}.yaml file missing"
@@ -11,11 +10,15 @@ set -o nounset
 set -o pipefail
 set -o errexit
 
+# Load profile vars
 ARCH=$(yq eval '.profile.arch' ${filename})
 CLUSTER_CAPACITY=$(yq eval '.profile.cluster_capacity' ${filename})
 CLUSTER_ID=$(yq eval '.profile.cluster_id' ${filename})
 ENVIRONMENT=$(yq eval '.profile.environment' ${filename})
 TOKEN=$(yq eval '.profile.token' ${filename})
+
+# port-forward
+PORT_FRWD=2222
 
 # Debug and verify input
 if [[ -z "${TOKEN:-}" ]]; then
@@ -42,7 +45,7 @@ done
 # echo ${PORTS}
 
 function OC() {	
-	./oc --server https://api.ci.openshift.org --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
+	oc --server https://api.ci.openshift.org --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
 }
 
 function timestamp() {
@@ -67,7 +70,7 @@ function port-forward() {
 function ssh-tunnel() {
 	echo "$(timestamp) [INFO] Setting up a reverse SSH tunnel to connect bastion port "${@:?Bastion service port and local service port was not specified}"..."
 	while true; do
-		if ! ssh -N -T root@127.0.0.1 -p 2222 $@; then
+		if ! ssh -N -T root@127.0.0.1 -p ${PORT_FRWD} $@; then
 			echo "$(timestamp) [WARNING] SSH tunnelling failed, retrying..."
 			sleep 0.1
 		fi
@@ -94,8 +97,8 @@ while true; do
 		kill -9 ${PID_SSH}
 	fi
 
-	# set up port forwarding from the SSH bastion to the local port 2222
-	port-forward 2222 &
+	# set up port forwarding from the SSH bastion to the local port 2222 --> ${PORT_FRWD}
+	port-forward ${PORT_FRWD} &
 	PID_PORT=$!
 
 	# without a better synchonization library, we just need to wait for the port-forward to run

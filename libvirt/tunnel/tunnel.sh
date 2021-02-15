@@ -51,8 +51,8 @@ function timestamp() {
 }
 
 function port-forward() {
+	echo "$(timestamp) [INFO] Setting up port-forwarding to connect to the bastion..."
 	while true; do
-		echo "$(timestamp) [INFO] Setting up port-forwarding to connect to the bastion..."
 		pod="$( OC get pods --selector component=sshd -o jsonpath={.items[0].metadata.name} )"
 		if ! OC port-forward "${pod}" "${1:?Port was not specified}"; then
 			echo "$(timestamp) [WARNING] Port-forwarding failed, retrying..."
@@ -65,9 +65,9 @@ function port-forward() {
 # It basically says send traffic from bastion service port to
 # local VM port using port 2222 to establish the ssh connection.
 function ssh-tunnel() {
+	echo "$(timestamp) [INFO] Setting up a reverse SSH tunnel to connect bastion port "${@:?Bastion service port and local service port was not specified}"..."
 	while true; do
-		echo "$(timestamp) [INFO] Setting up a reverse SSH tunnel to connect bastion port "${1:?Bastion service port and local service port was not specified}"..."
-		if ! ssh -N -T root@127.0.0.1 -p 2222 $1; then
+		if ! ssh -N -T root@127.0.0.1 -p 2222 $@; then
 			echo "$(timestamp) [WARNING] SSH tunnelling failed, retrying..."
 			sleep 0.1
 		fi

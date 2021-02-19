@@ -106,6 +106,10 @@ while true; do
 	# without a better synchonization library, we just need to wait for the port-forward to run
 	sleep 5s
 
+	# we need to authorize the host without asking the user a question
+	ssh-keygen -f ~/.ssh/known_hosts -R "[127.0.0.1]:${PORT_FRWD}"
+	ssh-keyscan -p ${PORT_FRWD} 127.0.0.1 >> ~/.ssh/known_hosts
+
 	# run an SSH tunnel from the port on the SSH bastion (through local port 2222) to local port 
 	ssh-tunnel ${PORTS} &
 

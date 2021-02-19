@@ -4,95 +4,130 @@ set -o nounset
 set -o pipefail
 set -o errexit
 
-# Number of clusters that can run on this host
-cluster_capacity=5
+SCRIPT_PATH=$(dirname $0)
+filename="${SCRIPT_PATH}/profile_${HOSTNAME}.yaml" #HOSTNAME
 
-# Bastion name & credentials
-bastion_name="bastion-z"
-token=""
+if [[ ! -f "${filename}" ]]; then
+	echo "${filename} file missing"
+	exit 0
+fi
 
-# Default Ports
-libvirt_port=16509
-api_port=6443
-http_port=80
-https_port=443
+# Load profile vars
+ARCH=$(yq eval '.profile.arch' ${filename})
+CLUSTER_CAPACITY=$(yq eval '.profile.cluster_capacity' ${filename})
+CLUSTER_ID=$(yq eval '.profile.cluster_id' ${filename})
+ENVIRONMENT=$(yq eval '.profile.environment' ${filename})
+TOKEN=$(yq eval '.profile.token' ${filename})
 
-# Cluster id is added to bastion ports so that they don't conflict with each other
-cluster_id=1
-declare -A BASTION_PORTS
-BASTION_PORTS["LIBVIRT"]=$(($libvirt_port + $cluster_id))
-BASTION_PORTS["API"]=$(($api_port + $cluster_id))
-BASTION_PORTS["HTTP"]=$(($http_port + $cluster_id))
-BASTION_PORTS["HTTPS"]=$(($https_port + $cluster_id))
-
-# Bastion ports are calculated to ensure uniqueness, but the first env breaks the pattern
-declare -A CLUSTER_PORTS
-CLUSTER_PORTS["0,API"]=${BASTION_PORTS["API"]}
-CLUSTER_PORTS["0,HTTP"]=$((${BASTION_PORTS["HTTP"]} + 8000))
-CLUSTER_PORTS["0,HTTPS"]=$((${BASTION_PORTS["HTTPS"]} + 8000))
-for (( i=1; i<$cluster_capacity; i++ ))
-do
-  CLUSTER_PORTS["$i,API"]=$((${BASTION_PORTS["API"]} + 10000 * $i))
-  CLUSTER_PORTS["$i,HTTP"]=$((${BASTION_PORTS["HTTP"]} + 10000 * $i))
-  CLUSTER_PORTS["$i,HTTPS"]=$((${BASTION_PORTS["HTTPS"]} + 10000 * $i))
-done
+# port-forward
+PORT_FRWD=2222
 
 # Debug and verify input
-if [[ -z "${token:-}" ]]; then
-  echo "[ERROR] \$token must be passed."
-  exit 1
+if [[ -z "${TOKEN:-}" ]]; then
+	echo "[FATAL] \${token} must be set to the credentials of the port-forwarder service account."
+	exit 1
+elif [[ -z "${ENVIRONMENT:-}" ]]; then
+	echo "[FATAL] \${environment} must be set to specify which bastion to interact with."
+	exit 1
+elif [[ -z "${CLUSTER_CAPACITY:-}" ]]; then
+	echo "[FATAL] \${CLUSTER_CAPACITY} must be set to specify cluster capacity."
+	exit 1
+elif [[ -z "${CLUSTER_ID:-}" ]]; then
+	echo "[FATAL] \${CLUSTER_ID} must be set to specify cluster."
+	exit 1
 fi
-# declare -p BASTION_PORTS
-# declare -p CLUSTER_PORTS
-# echo "-R ${BASTION_PORTS['LIBVIRT']}:127.0.0.1:16509"
-# echo "-R ${CLUSTER_PORTS['0,API']}:127.0.0.1:6443   -R ${CLUSTER_PORTS['0,HTTP']}:127.0.0.1:80    -R ${CLUSTER_PORTS['0,HTTPS']}:127.0.0.1:443"
-# echo "-R ${CLUSTER_PORTS['1,API']}:127.0.0.1:16443  -R ${CLUSTER_PORTS['1,HTTP']}:127.0.0.1:10080 -R ${CLUSTER_PORTS['1,HTTPS']}:127.0.0.1:10443"
-# echo "-R ${CLUSTER_PORTS['2,API']}:127.0.0.1:26443  -R ${CLUSTER_PORTS['2,HTTP']}:127.0.0.1:20080 -R ${CLUSTER_PORTS['2,HTTPS']}:127.0.0.1:20443"
-# echo "-R ${CLUSTER_PORTS['3,API']}:127.0.0.1:36443  -R ${CLUSTER_PORTS['3,HTTP']}:127.0.0.1:30080 -R ${CLUSTER_PORTS['3,HTTPS']}:127.0.0.1:30443"
-# echo "-R ${CLUSTER_PORTS['4,API']}:127.0.0.1:46443  -R ${CLUSTER_PORTS['4,HTTP']}:127.0.0.1:40080 -R ${CLUSTER_PORTS['4,HTTPS']}:127.0.0.1:40443"
 
-function OC() {
-	./oc --server https://api.ci.openshift.org --token "${token}" --namespace "${bastion_name}" "${@}"
+# Declaring and setting Bastion and Local ports
+PORTS="-R $(yq eval '.libvirt.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt.target-port' ${filename})"
+for i in $(seq 0 $(( $CLUSTER_CAPACITY-1 )) ); do
+		PORTS+=" -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.api.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.api.target-port' ${filename}) 
+				 -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.target-port' ${filename}) 
+				 -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.target-port' ${filename}) "
+done
+# echo ${PORTS}
+
+function OC() {	
+	oc --server https://api.ci.openshift.org --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
+}
+
+function timestamp() {
+	# With UTC format.  2020-11-04 06:19:24
+	date -u  +"%Y-%m-%d %H:%M:%S"
 }
 
 function port-forward() {
+	echo "$(timestamp) [INFO] Setting up port-forwarding to connect to the bastion..."
 	while true; do
-		echo "[INFO] Setting up port-forwarding..."
 		pod="$( OC get pods --selector component=sshd -o jsonpath={.items[0].metadata.name} )"
-		if ! OC port-forward "${pod}" 2222; then
-			echo "[WARNING] Port-forwarding failed, retrying..."
+		if ! OC port-forward "${pod}" "${1:?Port was not specified}"; then
+			echo "$(timestamp) [WARNING] Port-forwarding failed, retrying..."
 			sleep 0.1
 		fi
 	done
 }
 
+# This opens an ssh tunnel. It uses port 2222 for the ssh traffic.
+# It basically says send traffic from bastion service port to
+# local VM port using port 2222 to establish the ssh connection.
 function ssh-tunnel() {
+	echo "$(timestamp) [INFO] Setting up a reverse SSH tunnel to connect bastion port "${@:?Bastion service port and local service port was not specified}"..."
 	while true; do
-		echo "[INFO] Setting up SSH tunnelling..."
-		if ! ssh -N -T root@127.0.0.1 -p 2222 \
-                        -R ${BASTION_PORTS["LIBVIRT"]}:127.0.0.1:16509 \
-                        -R ${CLUSTER_PORTS["0,API"]}:127.0.0.1:6443   -R ${CLUSTER_PORTS["0,HTTP"]}:127.0.0.1:80    -R ${CLUSTER_PORTS["0,HTTPS"]}:127.0.0.1:443 \
-                        -R ${CLUSTER_PORTS["1,API"]}:127.0.0.1:16443  -R ${CLUSTER_PORTS["1,HTTP"]}:127.0.0.1:10080 -R ${CLUSTER_PORTS["1,HTTPS"]}:127.0.0.1:10443 \
-                        -R ${CLUSTER_PORTS["2,API"]}:127.0.0.1:26443  -R ${CLUSTER_PORTS["2,HTTP"]}:127.0.0.1:20080 -R ${CLUSTER_PORTS["2,HTTPS"]}:127.0.0.1:20443 \
-                        -R ${CLUSTER_PORTS["3,API"]}:127.0.0.1:36443  -R ${CLUSTER_PORTS["3,HTTP"]}:127.0.0.1:30080 -R ${CLUSTER_PORTS["3,HTTPS"]}:127.0.0.1:30443 \
-                        -R ${CLUSTER_PORTS["4,API"]}:127.0.0.1:46443  -R ${CLUSTER_PORTS["4,HTTP"]}:127.0.0.1:40080 -R ${CLUSTER_PORTS["4,HTTPS"]}:127.0.0.1:40443 \
-		; then
-			echo "[WARNING] SSH tunnelling failed, retrying..."
+		if ! ssh -N -T root@127.0.0.1 -p ${PORT_FRWD} $@; then
+			echo "$(timestamp) [WARNING] SSH tunnelling failed, retrying..."
 			sleep 0.1
 		fi
 	done
+}
+
+function pid-exists() {
+	kill -0 $1 2>/dev/null
+	return $?
 }
 
 trap "kill 0" SIGINT
+PID_PORT=-1
+PID_SSH=-1
 
-# set up port forwarding from the SSH bastion to the local port 2222
-port-forward &
+while true; do
 
-# without a better synchonization library, we just need to wait for the port-forward to run
-sleep 5
+	if [[ ${PID_PORT} > 1 ]] && pid-exists ${PID_PORT}; then
+		echo "$(timestamp) *** [WARNING] Killing old port-forward (${PID_PORT})" >> tunnel.log
+		kill -9 ${PID_PORT}
+	fi
+	if [[ ${PID_SSH} > 1 ]] && pid-exists ${PID_SSH}; then
+		echo "$(timestamp) *** [WARNING] Killing old ssh-tunnel (${PID_SSH})" >> tunnel.log
+		kill -9 ${PID_SSH}
+	fi
 
-# run an SSH tunnel from the port 8080 on the SSH bastion (through local port 2222) to local port 80
-ssh-tunnel &
+	# set up port forwarding from the SSH bastion to the local port 2222 --> ${PORT_FRWD}
+	port-forward ${PORT_FRWD} &
+	PID_PORT=$!
+
+	# without a better synchonization library, we just need to wait for the port-forward to run
+	sleep 5s
+
+	# run an SSH tunnel from the port on the SSH bastion (through local port 2222) to local port 
+	ssh-tunnel ${PORTS} &
+
+	PID_SSH=$!
+	sleep 5s
+	while true; do
+		if pid-exists ${PID_PORT} && pid-exists ${PID_SSH}; then
+			echo "$(timestamp) *** [INFO] Everyone up" >> tunnel.log
+			sleep 10m
+		else
+			if ! pid-exists ${PID_PORT}; then
+				echo "$(timestamp) *** [WARNING]: port-forward down!" >> tunnel.log
+			fi
+			if ! pid-exists ${PID_SSH}; then
+				echo "$(timestamp) *** [WARNING]: ssh-tunnel down!" >> tunnel.log
+			fi
+			break
+		fi
+
+	done
+
+done
 
 for job in $( jobs -p ); do
 	wait "${job}"

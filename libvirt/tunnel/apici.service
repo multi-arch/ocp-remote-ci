@@ -6,8 +6,8 @@ After=network.target
 Type=simple
 # Another Type: forking
 User=ocp
-WorkingDirectory=/home/ocp
-ExecStart=/home/ocp/tunnel.sh
+WorkingDirectory=/home/ocp/ocp-remote-ci/libvirt/tunnel
+ExecStart=$(WorkingDirectory)/tunnel.sh
 Restart=on-failure
 # Other restart options: always, on-abort, etc
 

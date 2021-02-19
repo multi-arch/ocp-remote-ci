@@ -91,11 +91,11 @@ PID_SSH=-1
 while true; do
 
 	if [[ ${PID_PORT} > 1 ]] && pid-exists ${PID_PORT}; then
-		echo "$(timestamp) *** [WARNING] Killing old port-forward (${PID_PORT})" >> tunnel.log
+		echo "$(timestamp) *** [WARNING] Killing old port-forward (${PID_PORT})"
 		kill -9 ${PID_PORT}
 	fi
 	if [[ ${PID_SSH} > 1 ]] && pid-exists ${PID_SSH}; then
-		echo "$(timestamp) *** [WARNING] Killing old ssh-tunnel (${PID_SSH})" >> tunnel.log
+		echo "$(timestamp) *** [WARNING] Killing old ssh-tunnel (${PID_SSH})"
 		kill -9 ${PID_SSH}
 	fi
 
@@ -113,14 +113,14 @@ while true; do
 	sleep 5s
 	while true; do
 		if pid-exists ${PID_PORT} && pid-exists ${PID_SSH}; then
-			echo "$(timestamp) *** [INFO] Everyone up" >> tunnel.log
+			echo "$(timestamp) *** [INFO] Everyone up"
 			sleep 10m
 		else
 			if ! pid-exists ${PID_PORT}; then
-				echo "$(timestamp) *** [WARNING]: port-forward down!" >> tunnel.log
+				echo "$(timestamp) *** [WARNING]: port-forward down!"
 			fi
 			if ! pid-exists ${PID_SSH}; then
-				echo "$(timestamp) *** [WARNING]: ssh-tunnel down!" >> tunnel.log
+				echo "$(timestamp) *** [WARNING]: ssh-tunnel down!"
 			fi
 			break
 		fi

@@ -1,14 +1,16 @@
 #!/bin/bash
 
-if [[ ! -f profile_${HOSTNAME}.yaml ]]; then
-	echo "profile_${HOSTNAME}.yaml file missing"
-	exit 0
-fi
-filename=profile_${HOSTNAME}.yaml #HOSTNAME
-
 set -o nounset
 set -o pipefail
 set -o errexit
+
+SCRIPT_PATH=$(dirname $0)
+filename="${SCRIPT_PATH}/profile_${HOSTNAME}.yaml" #HOSTNAME
+
+if [[ ! -f "${filename}" ]]; then
+	echo "${filename} file missing"
+	exit 0
+fi
 
 # Load profile vars
 ARCH=$(yq eval '.profile.arch' ${filename})

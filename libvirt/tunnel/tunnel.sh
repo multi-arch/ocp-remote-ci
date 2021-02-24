@@ -47,7 +47,7 @@ done
 # echo ${PORTS}
 
 function OC() {	
-	oc --server https://api.ci.openshift.org --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
+	oc --server https://api.build01.ci.devcluster.openshift.com --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
 }
 
 function timestamp() {

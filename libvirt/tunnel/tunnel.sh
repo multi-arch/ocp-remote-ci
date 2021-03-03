@@ -61,7 +61,7 @@ function port-forward() {
 		pod="$( OC get pods --selector component=sshd -o jsonpath={.items[0].metadata.name} )"
 		if ! OC port-forward "${pod}" "${1:?Port was not specified}"; then
 			echo "$(timestamp) [WARNING] Port-forwarding failed, retrying..."
-			sleep 0.1
+			sleep 30s
 		fi
 	done
 }

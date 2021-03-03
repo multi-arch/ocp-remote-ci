@@ -1,0 +1,61 @@
+profile:
+  arch: "ppc64le"
+  cluster_capacity: 4
+  cluster_id: 0
+  environment: "bastion-ppc64le-libvirt"
+  token: ""
+libvirt:
+  bastion-port: 16509
+  target-port: 16509
+libvirt-ppc64le-0-0:
+  api:
+    bastion-port: 6444
+    target-port: 6445
+    target-ip: 127.0.0.1
+  http:
+    bastion-port: 8080
+    target-port: 8080
+    target-ip: 127.0.0.1
+  https:
+    bastion-port: 8443
+    target-port: 8443
+    target-ip: 127.0.0.1
+libvirt-ppc64le-0-1:
+  api:
+    bastion-port: 16444
+    target-port: 16445
+    target-ip: 127.0.0.1
+  http:
+    bastion-port: 18080
+    target-port: 18080
+    target-ip: 127.0.0.1
+  https:
+    bastion-port: 18443
+    target-port: 18443
+    target-ip: 127.0.0.1
+libvirt-ppc64le-0-2:
+  api:
+    bastion-port: 26444
+    target-port: 26445
+    target-ip: 127.0.0.1
+  http:
+    bastion-port: 28080
+    target-port: 28080
+    target-ip: 127.0.0.1
+  https:
+    bastion-port: 28443
+    target-port: 28443
+    target-ip: 127.0.0.1
+libvirt-ppc64le-0-3:
+  api:
+    bastion-port: 36444
+    target-port: 36445
+    target-ip: 127.0.0.1
+  http:
+    bastion-port: 38080
+    target-port: 38080
+    target-ip: 127.0.0.1
+  https:
+    bastion-port: 38443
+    target-port: 38443
+    target-ip: 127.0.0.1

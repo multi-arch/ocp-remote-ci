@@ -52,7 +52,7 @@ if echo "${PORTS}" | grep null 2> /dev/null; then
 fi
 
 function OC() {	
-	oc --server https://api.build01.ci.devcluster.openshift.com --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
+	oc --server https://api.build01.ci.devcluster.openshift.com:6443 --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
 }
 
 function timestamp() {

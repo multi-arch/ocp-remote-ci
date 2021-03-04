@@ -79,7 +79,7 @@ function ssh-tunnel() {
 	while true; do
 		if ! ssh -N -T root@127.0.0.1 -p ${PORT_FRWD} $@; then
 			echo "$(timestamp) [WARNING] SSH tunnelling failed, retrying..."
-			sleep 0.1
+			sleep 30s
 		fi
 	done
 }

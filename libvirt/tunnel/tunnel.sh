@@ -44,10 +44,15 @@ for i in $(seq 0 $(( $CLUSTER_CAPACITY-1 )) ); do
 				 -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.target-port' ${filename}) 
 				 -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.target-port' ${filename}) "
 done
-# echo ${PORTS}
+
+if echo "${PORTS}" | grep null 2> /dev/null; then
+	echo "Error: yq returned null in PORTS variable creation"
+	echo "PORTS=${PORTS}"
+	exit 1
+fi
 
 function OC() {	
-	oc --server https://api.build01.ci.devcluster.openshift.com --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
+	oc --server https://api.build01.ci.devcluster.openshift.com:6443 --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
 }
 
 function timestamp() {
@@ -61,7 +66,7 @@ function port-forward() {
 		pod="$( OC get pods --selector component=sshd -o jsonpath={.items[0].metadata.name} )"
 		if ! OC port-forward "${pod}" "${1:?Port was not specified}"; then
 			echo "$(timestamp) [WARNING] Port-forwarding failed, retrying..."
-			sleep 0.1
+			sleep 30s
 		fi
 	done
 }

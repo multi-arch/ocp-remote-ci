@@ -61,27 +61,53 @@ function timestamp() {
 }
 
 function port-forward() {
+	LAST_GOOD_DATE=$(date +%s)
+
 	echo "$(timestamp) [INFO] Setting up port-forwarding to connect to the bastion..."
+
 	while true; do
+		CURRENT_GOOD_DATE=$(date +%s)
+		# Have we been unsuccessful for 15 minutes?
+		if (( CURRENT_GOOD_DATE - LAST_GOOD_DATE > 15*60 )); then
+			# Houston, we have a problem
+			echo "$(timestamp) *** [ERROR] port-forward: CURRENT_GOOD_DATE=${CURRENT_GOOD_DATE} > LAST_GOOD_DATE=${LAST_GOOD_DATE}"
+			break
+		fi
+
 		pod="$( OC get pods --selector component=sshd -o jsonpath={.items[0].metadata.name} )"
 		if ! OC port-forward "${pod}" "${1:?Port was not specified}"; then
 			echo "$(timestamp) [WARNING] Port-forwarding failed, retrying..."
 			sleep 30s
 		fi
 	done
+
+	echo "$(timestamp) [INFO] Exiting port-forward"
 }
 
 # This opens an ssh tunnel. It uses port 2222 for the ssh traffic.
 # It basically says send traffic from bastion service port to
 # local VM port using port 2222 to establish the ssh connection.
 function ssh-tunnel() {
+	LAST_GOOD_DATE=$(date +%s)
+
 	echo "$(timestamp) [INFO] Setting up a reverse SSH tunnel to connect bastion port "${@:?Bastion service port and local service port was not specified}"..."
+
 	while true; do
+		CURRENT_GOOD_DATE=$(date +%s)
+		# Have we been unsuccessful for 15 minutes?
+		if (( CURRENT_GOOD_DATE - LAST_GOOD_DATE > 15*60 )); then
+			# Houston, we have a problem
+			echo "$(timestamp) *** [ERROR] ssh-tunnel: CURRENT_GOOD_DATE=${CURRENT_GOOD_DATE} > LAST_GOOD_DATE=${LAST_GOOD_DATE}"
+			break
+		fi
+
 		if ! ssh -N -T root@127.0.0.1 -p ${PORT_FRWD} $@; then
 			echo "$(timestamp) [WARNING] SSH tunnelling failed, retrying..."
 			sleep 30s
 		fi
 	done
+
+	echo "$(timestamp) [INFO] Exiting ssh-tunnel"
 }
 
 function pid-exists() {
@@ -90,8 +116,10 @@ function pid-exists() {
 }
 
 trap "kill 0" SIGINT
+
 PID_PORT=-1
 PID_SSH=-1
+LAST_GOOD_DATE=$(date +%s)
 
 while true; do
 
@@ -102,6 +130,14 @@ while true; do
 	if [[ ${PID_SSH} > 1 ]] && pid-exists ${PID_SSH}; then
 		echo "$(timestamp) *** [WARNING] Killing old ssh-tunnel (${PID_SSH})"
 		kill -9 ${PID_SSH}
+	fi
+
+	CURRENT_GOOD_DATE=$(date +%s)
+	# Have we been unsuccessful for 15 minutes?
+	if (( CURRENT_GOOD_DATE - LAST_GOOD_DATE > 15*60 )); then
+		# Houston, we have a problem
+		"$(timestamp) *** [ERROR] main: CURRENT_GOOD_DATE=${CURRENT_GOOD_DATE} > LAST_GOOD_DATE=${LAST_GOOD_DATE}"
+		break
 	fi
 
 	# set up port forwarding from the SSH bastion to the local port 2222 --> ${PORT_FRWD}
@@ -117,11 +153,14 @@ while true; do
 
 	# run an SSH tunnel from the port on the SSH bastion (through local port 2222) to local port 
 	ssh-tunnel ${PORTS} &
-
 	PID_SSH=$!
+
+	# without a better synchonization library, we just need to wait for the ssh-tunnel to run
 	sleep 5s
+
 	while true; do
 		if pid-exists ${PID_PORT} && pid-exists ${PID_SSH}; then
+			LAST_GOOD_DATE=$(date +%s)
 			echo "$(timestamp) *** [INFO] Everyone up"
 			sleep 10m
 		else
@@ -133,11 +172,12 @@ while true; do
 			fi
 			break
 		fi
-
 	done
 
 done
 
-for job in $( jobs -p ); do
-	wait "${job}"
-done
+[ -n "${PID_PORT} ] && (( ${PID_PORT} > 1 )) && kill -9 ${PID_PORT}
+[ -n "${PID_SSH} ] && (( ${PID_SSH} > 1 )) && kill -9 ${PID_SSH}
+
+# We should always loop and never exit successfully
+exit 1

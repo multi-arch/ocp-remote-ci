@@ -29,6 +29,7 @@ then
 fi
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+OLD_SCRIPT_SHA1SUM=$(sha1sum /home/ocp/ocp-remote-ci/install-ci.sh | awk '{print $1}')
 
 if [[ ! -d "${SCRIPT_DIR}" ]]
 then
@@ -42,6 +43,14 @@ git reset --hard HEAD
 git clean -fxd .
 git checkout master
 git pull
+
+NEW_SCRIPT_SHA1SUM=$(sha1sum /home/ocp/ocp-remote-ci/install-ci.sh | awk '{print $1}')
+
+if [[ "${OLD_SCRIPT_SHA1SUM}" != "${NEW_SCRIPT_SHA1SUM}" ]]
+then
+	echo "ERROR: install-ci.sh has changed upstream, rerun to reload the script!"
+	exit 1
+fi
 
 sed -i -e 's,token: ".*$,token: "'${TOKEN}'",' ./libvirt/tunnel/profile_$(hostname).yaml
 

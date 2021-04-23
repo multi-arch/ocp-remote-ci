@@ -22,6 +22,12 @@ then
 	exit 1
 fi
 
+if ! sudo ls / > /dev/null 2>&1;
+then
+	echo "ERROR: passwordless sudo required!"
+	exit 1
+fi
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 if [[ ! -d "${SCRIPT_DIR}" ]]
@@ -42,7 +48,7 @@ sed -i -e 's,token: ".*$,token: "'${TOKEN}'",' ./libvirt/tunnel/profile_$(hostna
 if ! sudo diff ./libvirt/tunnel/apici.service /usr/lib/systemd/system/apici.service;
 then
 	sudo systemctl stop apici.service
-	sudo install --owner=root --group=root --mode=0644 libvirt/tunnel/apici.service /usr/lib/systemd/system/
+	sudo install --owner=root --group=root --mode=0644 ./libvirt/tunnel/apici.service /usr/lib/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl start apici.service
 	sudo systemctl status apici.service

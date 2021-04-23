@@ -26,7 +26,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 if [[ ! -d "${SCRIPT_DIR}" ]]
 then
-	echo "ERROR: Directory ${SCRIPT_DIR}/ocp-remote-ci/ doesn't exist!"
+	echo "ERROR: Directory ${SCRIPT_DIR} doesn't exist!"
 	exit 1
 fi
 

@@ -38,12 +38,7 @@ elif [[ -z "${CLUSTER_ID:-}" ]]; then
 fi
 
 # Declaring and setting Bastion and Local ports
-PORTS="-R $(yq eval '.libvirt.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt.target-port' ${filename})"
-for i in $(seq 0 $(( $CLUSTER_CAPACITY-1 )) ); do
-		PORTS+=" -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.api.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.api.target-port' ${filename}) 
-				 -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.target-port' ${filename}) 
-				 -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.target-port' ${filename}) "
-done
+PORTS="-R 16509:127.0.0.1:16509 -R 6443:127.0.0.1:6443 -R 80:127.0.0.1:80 -R 443:127.0.0.1:443 "
 # echo ${PORTS}
 
 function OC() {	

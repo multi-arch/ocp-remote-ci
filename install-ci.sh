@@ -64,20 +64,23 @@ cd "${SCRIPT_DIR}"
 git reset --hard HEAD
 git clean -fxd .
 git checkout master
-git pull
-
-sed -i -e 's,token: ".*$,token: "'${TOKEN}'",' ./libvirt/tunnel/profile_$(hostname).yaml
+git fetch
+git checkout -m origin/master install-ci.sh
 
 NEW_INSTALL_CI_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/install-ci.sh | awk '{print $1}')
-NEW_TUNNEL_SH_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/libvirt/tunnel/tunnel.sh | awk '{print $1}')
-NEW_TUNNEL_PROFILE_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/libvirt/tunnel/profile_$(hostname).yaml | awk '{print $1}')
 
 if [[ "${OLD_INSTALL_CI_SHA1SUM}" != "${NEW_INSTALL_CI_SHA1SUM}" ]]
 then
 	echo "ERROR: install-ci.sh has changed upstream, rerun to reload the script!"
-	echo "ERROR: Also please run restart-services.sh afterward!"
 	exit 1
 fi
+
+git pull
+
+sed -i -e 's,token: ".*$,token: "'${TOKEN}'",' ./libvirt/tunnel/profile_$(hostname).yaml
+
+NEW_TUNNEL_SH_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/libvirt/tunnel/tunnel.sh | awk '{print $1}')
+NEW_TUNNEL_PROFILE_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/libvirt/tunnel/profile_$(hostname).yaml | awk '{print $1}')
 
 if ! tunnel_unmodified
 then

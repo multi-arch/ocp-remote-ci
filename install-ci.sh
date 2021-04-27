@@ -1,6 +1,27 @@
 #!/usr/bin/env bash
 set -xeu
 
+function tunnel_unmodified ()
+{
+	sudo diff ./libvirt/tunnel/apici.service /usr/lib/systemd/system/apici.service
+	RC=$?
+	if [ ${RC} -eq 1 ]
+	then
+		return 1
+	fi
+
+	[[ "${OLD_TUNNEL_PROFILE_SHA1SUM}" == "${NEW_TUNNEL_PROFILE_SHA1SUM}" ]]
+	RC=$?
+	if [ ${RC} -eq 1 ]
+	then
+		return 1
+	fi
+
+	[[ "${OLD_TUNNEL_SH_SHA1SUM}" == "${NEW_TUNNEL_SH_SHA1SUM}" ]]
+	RC=$?
+	return ${RC}
+}
+
 if [[ ! -v TOKEN ]]
 then
 	echo "ERROR: TOKEN environment variable must be set!"
@@ -21,7 +42,6 @@ then
 	echo "ERROR: the hostname command must resolve to a name!"
 	exit 1
 fi
-
 if ! sudo ls / > /dev/null 2>&1;
 then
 	echo "ERROR: passwordless sudo required!"
@@ -29,7 +49,9 @@ then
 fi
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-OLD_SCRIPT_SHA1SUM=$(sha1sum /home/ocp/ocp-remote-ci/install-ci.sh | awk '{print $1}')
+OLD_INSTALL_CI_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/install-ci.sh | awk '{print $1}')
+OLD_TUNNEL_SH_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/libvirt/tunnel/tunnel.sh | awk '{print $1}')
+OLD_TUNNEL_PROFILE_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/libvirt/tunnel/profile_$(hostname).yaml | awk '{print $1}')
 
 if [[ ! -d "${SCRIPT_DIR}" ]]
 then
@@ -44,17 +66,19 @@ git clean -fxd .
 git checkout master
 git pull
 
-NEW_SCRIPT_SHA1SUM=$(sha1sum /home/ocp/ocp-remote-ci/install-ci.sh | awk '{print $1}')
+sed -i -e 's,token: ".*$,token: "'${TOKEN}'",' ./libvirt/tunnel/profile_$(hostname).yaml
 
-if [[ "${OLD_SCRIPT_SHA1SUM}" != "${NEW_SCRIPT_SHA1SUM}" ]]
+NEW_INSTALL_CI_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/install-ci.sh | awk '{print $1}')
+NEW_TUNNEL_SH_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/libvirt/tunnel/tunnel.sh | awk '{print $1}')
+NEW_TUNNEL_PROFILE_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/libvirt/tunnel/profile_$(hostname).yaml | awk '{print $1}')
+
+if [[ "${OLD_INSTALL_CI_SHA1SUM}" != "${NEW_INSTALL_CI_SHA1SUM}" ]]
 then
 	echo "ERROR: install-ci.sh has changed upstream, rerun to reload the script!"
 	exit 1
 fi
 
-sed -i -e 's,token: ".*$,token: "'${TOKEN}'",' ./libvirt/tunnel/profile_$(hostname).yaml
-
-if ! sudo diff ./libvirt/tunnel/apici.service /usr/lib/systemd/system/apici.service;
+if ! tunnel_unmodified
 then
 	sudo systemctl stop apici.service
 	sudo install --owner=root --group=root --mode=0644 ./libvirt/tunnel/apici.service /usr/lib/systemd/system/

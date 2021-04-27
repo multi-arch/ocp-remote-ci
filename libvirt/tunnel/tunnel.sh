@@ -38,12 +38,10 @@ elif [[ -z "${CLUSTER_ID:-}" ]]; then
 fi
 
 # Declaring and setting Bastion and Local ports
-PORTS="-R $(yq eval '.libvirt.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt.target-port' ${filename})"
-for i in $(seq 0 $(( $CLUSTER_CAPACITY-1 )) ); do
-		PORTS+=" -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.api.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.api.target-port' ${filename}) 
-				 -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.target-port' ${filename}) 
-				 -R $(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.target-port' ${filename}) "
-done
+PORTS="-R $(yq eval '.libvirt.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt.target-port' ${filename}) 
+	-R $(yq eval '.api.bastion-port' ${filename}):127.0.0.1:$(yq eval '.api.target-port' ${filename}) 
+	-R $(yq eval '.http.bastion-port' ${filename}):127.0.0.1:$(yq eval '.http.target-port' ${filename}) 
+	-R $(yq eval '.https.bastion-port' ${filename}):127.0.0.1:$(yq eval '.https.target-port' ${filename}) "
 
 if echo "${PORTS}" | grep null 2> /dev/null; then
 	echo "Error: yq returned null in PORTS variable creation"

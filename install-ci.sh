@@ -75,6 +75,7 @@ NEW_TUNNEL_PROFILE_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/libvirt/tunnel
 if [[ "${OLD_INSTALL_CI_SHA1SUM}" != "${NEW_INSTALL_CI_SHA1SUM}" ]]
 then
 	echo "ERROR: install-ci.sh has changed upstream, rerun to reload the script!"
+	echo "ERROR: Also please run restart-services.sh afterward!"
 	exit 1
 fi
 

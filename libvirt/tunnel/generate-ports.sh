@@ -5,7 +5,7 @@ set -o errexit
 
 # Default Ports
 LIBVIRT_PORT=16509
-API_PORT=6444
+API_PORT=6443
 HTTP_PORT=80
 HTTPS_PORT=443
 
@@ -22,14 +22,11 @@ CLUSTER_ID=$(yq eval '.profile.cluster_id' ${filename})
 yq eval -i '.libvirt.bastion-port='$(( $LIBVIRT_PORT + $CLUSTER_ID ))'' ${filename}
 yq eval -i '.libvirt.target-port='$LIBVIRT_PORT'' ${filename}
 
-for i in $(seq 0 $(( $CLUSTER_CAPACITY-1 )) ); do
-    yq eval -i '.libvirt-'$ARCH-$CLUSTER_ID-$i'.api.bastion-port='$(($API_PORT + $CLUSTER_ID + 10000 * $i))'' ${filename}
-    yq eval -i '.libvirt-'$ARCH-$CLUSTER_ID-$i'.api.target-port='$(($API_PORT + 1 + 10000 * $i))'' ${filename}
-    yq eval -i '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.bastion-port='$(($HTTP_PORT + $CLUSTER_ID + 8000 + 10000 * $i))'' ${filename}
-    yq eval -i '.libvirt-'$ARCH-$CLUSTER_ID-$i'.http.target-port='$(($HTTP_PORT + + 8000 + 10000 * $i))'' ${filename}
-    yq eval -i '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.bastion-port='$(($HTTPS_PORT + $CLUSTER_ID + 8000 + 10000 * $i))'' ${filename}
-    yq eval -i '.libvirt-'$ARCH-$CLUSTER_ID-$i'.https.target-port='$(($HTTPS_PORT + 8000 + 10000 * $i))'' ${filename}
-   
-done
- yq eval -i '.libvirt-'$ARCH-$CLUSTER_ID'-*.*.target-ip="127.0.0.1"' ${filename}
+yq eval -i '.api.bastion-port='$(($API_PORT + $CLUSTER_ID))'' ${filename}
+yq eval -i '.api.target-port='$(($API_PORT))'' ${filename}
+yq eval -i '.http.bastion-port='$(($HTTP_PORT + $CLUSTER_ID))'' ${filename}
+yq eval -i '.http.target-port='$(($HTTP_PORT))'' ${filename}
+yq eval -i '.https.bastion-port='$(($HTTPS_PORT + $CLUSTER_ID))'' ${filename}
+yq eval -i '.https.target-port='$(($HTTPS_PORT))'' ${filename}
+
 done

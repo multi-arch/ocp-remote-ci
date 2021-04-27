@@ -1,13 +1,17 @@
 [Unit]
 Description=API CI
 After=network.target
+Wants=network.target
 
 [Service]
 Type=simple
 # Another Type: forking
 User=ocp
 ExecStart=bash /home/ocp/ocp-remote-ci/libvirt/tunnel/tunnel.sh
-Restart=on-failure
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
 # Other restart options: always, on-abort, etc
 
 # The install section is needed to use

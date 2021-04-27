@@ -11,8 +11,8 @@ api:
   bastion-port: 6443
   target-port: 6443
 http:
-  bastion-port: 80
+  bastion-port: 8080
   target-port: 80
 https:
-  bastion-port: 443
+  bastion-port: 8443
   target-port: 443

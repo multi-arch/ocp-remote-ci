@@ -24,9 +24,9 @@ yq eval -i '.libvirt.target-port='$LIBVIRT_PORT'' ${filename}
 
 yq eval -i '.api.bastion-port='$(($API_PORT + $CLUSTER_ID))'' ${filename}
 yq eval -i '.api.target-port='$(($API_PORT))'' ${filename}
-yq eval -i '.http.bastion-port='$(($HTTP_PORT + $CLUSTER_ID))'' ${filename}
+yq eval -i '.http.bastion-port='$(($HTTP_PORT + $CLUSTER_ID + 8000 ))'' ${filename}
 yq eval -i '.http.target-port='$(($HTTP_PORT))'' ${filename}
-yq eval -i '.https.bastion-port='$(($HTTPS_PORT + $CLUSTER_ID))'' ${filename}
+yq eval -i '.https.bastion-port='$(($HTTPS_PORT + $CLUSTER_ID + 8000 ))'' ${filename}
 yq eval -i '.https.target-port='$(($HTTPS_PORT))'' ${filename}
 
 done

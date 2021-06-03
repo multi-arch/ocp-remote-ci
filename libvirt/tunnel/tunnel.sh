@@ -5,6 +5,12 @@ set -o pipefail
 set -o errexit
 
 SCRIPT_PATH=$(dirname $0)
+# prow cluster api server
+API_SERVER=$1
+# port-forward
+PORT_FRWD=$2
+TOKEN=$3
+
 filename="${SCRIPT_PATH}/profile_${HOSTNAME}.yaml" #HOSTNAME
 
 if [[ ! -f "${filename}" ]]; then
@@ -17,10 +23,6 @@ ARCH=$(yq eval '.profile.arch' ${filename})
 CLUSTER_CAPACITY=$(yq eval '.profile.cluster_capacity' ${filename})
 CLUSTER_ID=$(yq eval '.profile.cluster_id' ${filename})
 ENVIRONMENT=$(yq eval '.profile.environment' ${filename})
-TOKEN=$(yq eval '.profile.token' ${filename})
-
-# port-forward
-PORT_FRWD=2222
 
 # Debug and verify input
 if [[ -z "${TOKEN:-}" ]]; then
@@ -50,7 +52,7 @@ if echo "${PORTS}" | grep null 2> /dev/null; then
 fi
 
 function OC() {	
-	oc --server https://api.build02.gcp.ci.openshift.org:6443 --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
+	oc --server ${API_SERVER} --token "${TOKEN}" --namespace "${ENVIRONMENT}" "${@}"
 }
 
 function timestamp() {

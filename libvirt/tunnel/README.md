@@ -42,5 +42,4 @@ profile:
   cluster_capacity: {cluster_capacity}
   cluster_id: {cluster_id}
   environment: "{env_name}"
-  token: "{access_token}"
 ```

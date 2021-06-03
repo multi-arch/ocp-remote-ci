@@ -3,7 +3,6 @@ profile:
   cluster_capacity: 5
   cluster_id: 1
   environment: "bastion-z"
-  token: ""
 libvirt:
   bastion-port: 16510
   target-port: 16509

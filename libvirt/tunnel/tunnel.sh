@@ -5,12 +5,6 @@ set -o pipefail
 set -o errexit
 
 SCRIPT_PATH=$(dirname $0)
-# prow cluster api server
-API_SERVER=$1
-# port-forward
-PORT_FRWD=$2
-TOKEN=$3
-
 filename="${SCRIPT_PATH}/profile_${HOSTNAME}.yaml" #HOSTNAME
 
 if [[ ! -f "${filename}" ]]; then

@@ -7,7 +7,8 @@ Wants=network.target
 Type=simple
 # Another Type: forking
 User=ocp
-ExecStart=bash /home/ocp/ocp-remote-ci/libvirt/tunnel/tunnel_build02.sh
+Environment='API_SERVER="https://api.build02.gcp.ci.openshift.org:6443"' 'PORT_FRWD=2223' 'TOKEN="__"'
+ExecStart=bash /home/ocp/ocp-remote-ci/libvirt/tunnel/tunnel.sh
 Restart=always
 RestartSec=3
 StandardOutput=journal

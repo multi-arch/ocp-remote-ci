@@ -1,5 +1,5 @@
 [Unit]
-Description=API CI
+Description=API CI BUILD02
 After=network.target
 Wants=network.target
 
@@ -7,6 +7,7 @@ Wants=network.target
 Type=simple
 # Another Type: forking
 User=ocp
+Environment='API_SERVER="https://api.build02.gcp.ci.openshift.org:6443"' 'PORT_FRWD=2223' 'TOKEN="__"'
 ExecStart=bash /home/ocp/ocp-remote-ci/libvirt/tunnel/tunnel.sh
 Restart=always
 RestartSec=3

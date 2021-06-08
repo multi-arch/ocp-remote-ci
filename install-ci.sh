@@ -179,8 +179,8 @@ fi
 
 git pull
 
-sed -i -e 's,TOKEN="__",TOKEN="'${TOKEN_B01}'",' libvirt/tunnel/apici_build01.service
-sed -i -e 's,TOKEN="__",TOKEN="'${TOKEN_B02}'",' libvirt/tunnel/apici_build02.service
+sed -i -e 's,TOKEN=__,TOKEN='${TOKEN_B01}',' libvirt/tunnel/apici_build01.service
+sed -i -e 's,TOKEN=__,TOKEN='${TOKEN_B02}',' libvirt/tunnel/apici_build02.service
 
 declare -a LIBVIRT_FILES_NEW_SHA
 

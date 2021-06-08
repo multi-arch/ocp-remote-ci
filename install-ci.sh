@@ -192,10 +192,10 @@ done
 
 if ! shas_unmodified LIBVIRT_FILES_OLD_SHA LIBVIRT_FILES_NEW_SHA
 then
-	echo restart_apici
+	restart_apici
 fi
 
 if ! sudo diff ./libvirt/haproxy/haproxy_$(hostname).cfg /etc/haproxy/haproxy.cfg;
 then
-	echo restart_haproxy
+	restart_haproxy
 fi

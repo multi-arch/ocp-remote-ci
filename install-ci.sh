@@ -95,7 +95,6 @@ then
 fi
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-SCRIPT_DIR="/home/ocp/ocp-remote-ci/"
 
 if [[ ! -d "${SCRIPT_DIR}" ]]
 then

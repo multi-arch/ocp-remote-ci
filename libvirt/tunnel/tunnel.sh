@@ -31,6 +31,12 @@ elif [[ -z "${CLUSTER_CAPACITY:-}" ]]; then
 elif [[ -z "${CLUSTER_ID:-}" ]]; then
 	echo "[FATAL] \${CLUSTER_ID} must be set to specify cluster."
 	exit 1
+elif [[ -z "${API_SERVER:-}" ]]; then
+	echo "[FATAL] \${API_SERVER} must be set to specify which prow to interact with."
+	exit 1
+elif [[ -z "${PORT_FRWD:-}" ]]; then
+	echo "[FATAL] \${PORT_FRWD} must be set to specify which port to forward with."
+	exit 1
 fi
 
 # Declaring and setting Bastion and Local ports

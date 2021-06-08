@@ -170,8 +170,8 @@ while true; do
 
 done
 
-[ -n "${PID_PORT} ] && (( ${PID_PORT} > 1 )) && kill -9 ${PID_PORT}
-[ -n "${PID_SSH} ] && (( ${PID_SSH} > 1 )) && kill -9 ${PID_SSH}
+[ -n "${PID_PORT}" ] && (( ${PID_PORT} > 1 )) && kill -9 ${PID_PORT}
+[ -n "${PID_SSH}" ] && (( ${PID_SSH} > 1 )) && kill -9 ${PID_SSH}
 
 # We should always loop and never exit successfully
 exit 1

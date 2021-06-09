@@ -142,8 +142,8 @@ while true; do
 		break
 	fi
 
-	# set up port forwarding from the SSH bastion to the local port 2222 --> ${PORT_FRWD}
-	port-forward ${PORT_FRWD} &
+	# set up port forwarding from the SSH bastion to the local port, 2222 --> ${PORT_FRWD}
+	port-forward ${PORT_FRWD}:2222 &
 	PID_PORT=$!
 
 	# without a better synchonization library, we just need to wait for the port-forward to run

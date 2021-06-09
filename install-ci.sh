@@ -7,7 +7,7 @@ function restart_apici ()
 
 	for APICI in ${APICIS[@]}
 	do
-		sudo systemctl stop ${APICI}.service
+		sudo systemctl stop ${APICI}.service || true
 		sudo install --owner=root --group=root --mode=0644 ./libvirt/tunnel/${APICI}.service /usr/lib/systemd/system/
 	done
 	sudo systemctl daemon-reload
@@ -23,6 +23,17 @@ function restart_haproxy ()
 	sudo /bin/cp ./libvirt/haproxy/haproxy_$(hostname).cfg /etc/haproxy/haproxy.cfg
 	sudo systemctl restart haproxy.service
 	sudo systemctl status haproxy.service
+}
+
+function my_sha ()
+{
+	local F=${1}
+
+	SUM=$(sudo sha1sum ${F} | cut -f1 -d' ')
+	RC=${PIPESTATUS[0]}
+	echo ${SUM}
+
+	return ${RC}
 }
 
 function shas_unmodified ()
@@ -52,6 +63,14 @@ then
 	echo "ERROR: NAMESPACE environment variable must have a value!"
 	exit 1
 fi
+case ${NAMESPACE} in
+	"bastion-ppc64le-libvirt"|"bastion-z")
+	;;
+	"*")
+		echo "ERROR: Invalid NAMESPACE value of ${NAMESPACE}"
+		exit 1
+	;;
+esac
 if [[ ! -v LOGIN_TOKEN_B01 ]]
 then
 	echo "ERROR: LOGIN_TOKEN_B01 environment variable must be set!"
@@ -95,6 +114,7 @@ then
 fi
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+#SCRIPT_DIR="/home/ocp/ocp-remote-ci"						# For hacking
 
 if [[ ! -d "${SCRIPT_DIR}" ]]
 then
@@ -114,14 +134,14 @@ function get_token ()
 	STATUS=$(oc get pods --namespace=${NAMESPACE} --selector=component=sshd -o=json | jq --raw-output '.items[].status.containerStatuses[].ready')
 	if [ "${STATUS}" == "false" ]
 	then
-		echo ""
+		echo "Error: sshd pod is not ready"
 		return 1
 	fi
 
 	TOKEN=$(oc sa get-token port-forwarder --namespace=${NAMESPACE})
 	if [ -z "${TOKEN}" ]
 	then
-		echo ""
+		echo "Error: oc sa get-token port-forwarder returned an empty token?!"
 		return 1
 	fi
 
@@ -149,19 +169,37 @@ declare -a LIBVIRT_FILES_OLD_SHA
 LIBVIRT_FILES=(
 "libvirt/tunnel/apici_build01.service"
 "libvirt/tunnel/apici_build02.service"
-"libvirt/tunnel/profile_C155F2U31.yaml"
-"libvirt/tunnel/profile_C155F2U33.yaml"
-"libvirt/tunnel/profile_C155F2U35.yaml"
 "libvirt/tunnel/tunnel.sh"
 )
 
+case ${NAMESPACE} in
+	"bastion-ppc64le-libvirt")
+		LIBVIRT_FILES+=(
+"libvirt/tunnel/profile_C155F2U31.yaml"
+"libvirt/tunnel/profile_C155F2U33.yaml"
+"libvirt/tunnel/profile_C155F2U35.yaml"
+		)
+	;;
+	"bastion-z")
+		LIBVIRT_FILES+=(
+"libvirt/tunnel/profile_lnxocp01.yaml"
+"libvirt/tunnel/profile_lnxocp01.yaml"
+		)
+	;;
+esac
+
 for FILE in ${LIBVIRT_FILES[@]}
 do
-	SUM=$(sha1sum ${FILE} | cut -f1 -d' ')
+	SUM=$(sudo sha1sum ${FILE} | cut -f1 -d' ')
 	LIBVIRT_FILES_OLD_SHA+=( ${SUM} )
 done
 
-OLD_INSTALL_CI_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/install-ci.sh | awk '{print $1}')
+OLD_INSTALL_CI_SHA1SUM=$(my_sha ${SCRIPT_DIR}/install-ci.sh)
+RC=$?
+if [ ${RC} -gt 0 ]
+then
+	exit 1
+fi
 
 git reset --hard HEAD
 git clean -fxd .
@@ -169,7 +207,12 @@ git checkout master
 git fetch
 git checkout -m origin/master install-ci.sh
 
-NEW_INSTALL_CI_SHA1SUM=$(sudo sha1sum /home/ocp/ocp-remote-ci/install-ci.sh | awk '{print $1}')
+NEW_INSTALL_CI_SHA1SUM=$(my_sha ${SCRIPT_DIR}/install-ci.sh)
+RC=$?
+if [ ${RC} -gt 0 ]
+then
+	exit 1
+fi
 
 if [[ "${OLD_INSTALL_CI_SHA1SUM}" != "${NEW_INSTALL_CI_SHA1SUM}" ]]
 then

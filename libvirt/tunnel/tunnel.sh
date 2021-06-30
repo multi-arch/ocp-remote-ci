@@ -103,7 +103,7 @@ function ssh-tunnel() {
 			break
 		fi
 
-		if ! ssh -N -T root@127.0.0.1 -p ${PORT_FRWD} $@; then
+		if ! ssh -N -o ServerAliveInterval=30 -T root@127.0.0.1 -p ${PORT_FRWD} $@; then
 			echo "$(timestamp) [WARNING] SSH tunnelling failed, retrying..."
 			sleep 30s
 		fi

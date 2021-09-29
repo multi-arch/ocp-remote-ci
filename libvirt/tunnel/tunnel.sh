@@ -40,10 +40,19 @@ elif [[ -z "${PORT_FRWD:-}" ]]; then
 fi
 
 # Declaring and setting Bastion and Local ports
-PORTS="-R $(yq eval '.libvirt.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt.target-port' ${filename}) 
-	-R $(yq eval '.api.bastion-port' ${filename}):127.0.0.1:$(yq eval '.api.target-port' ${filename}) 
-	-R $(yq eval '.http.bastion-port' ${filename}):127.0.0.1:$(yq eval '.http.target-port' ${filename}) 
-	-R $(yq eval '.https.bastion-port' ${filename}):127.0.0.1:$(yq eval '.https.target-port' ${filename}) "
+PORTS="-R $(yq eval '.libvirt.bastion-port' ${filename}):127.0.0.1:$(yq eval '.libvirt.target-port' ${filename})"
+PORTS+=" -R $(yq eval '.api.bastion-port' ${filename}):127.0.0.1:$(yq eval '.api.target-port' ${filename})"
+PORTS+=" -R $(yq eval '.http.bastion-port' ${filename}):127.0.0.1:$(yq eval '.http.target-port' ${filename})"
+PORTS+=" -R $(yq eval '.https.bastion-port' ${filename}):127.0.0.1:$(yq eval '.https.target-port' ${filename})"
+
+declare -a BASTION_ADDRS=( "192.168.126.10" "192.168.1.10" "192.168.2.10" "192.168.3.10" "192.168.4.10" "192.168.6.10" )
+
+for CLUSTER_NUM in $(seq 0 ${CLUSTER_CAPACITY})
+do
+	BASTION_SSH=".bastion${CLUSTER_NUM}ssh"
+	BASTION_ADDR=${BASTION_ADDRS[${CLUSTER_NUM}]}
+	PORTS+=" -R $(yq eval ${BASTION_SSH}'.bastion-port' ${filename}):${BASTION_ADDR}:$(yq eval ${BASTION_SSH}'.target-port' ${filename})"
+done
 
 if echo "${PORTS}" | grep null 2> /dev/null; then
 	echo "Error: yq returned null in PORTS variable creation"
@@ -116,6 +125,8 @@ function pid-exists() {
 	kill -0 $1 2>/dev/null
 	return $?
 }
+
+echo "$(timestamp) [INFO] PORTS: ${PORTS}"
 
 trap "kill 0" SIGINT
 

@@ -201,11 +201,16 @@ then
 	exit 1
 fi
 
+if [[ ! -v BRANCH ]]
+then
+	BRANCH="master"
+fi
+
 git reset --hard HEAD
 git clean -fxd .
-git checkout master
+git checkout ${BRANCH}
 git fetch
-git checkout -m origin/master install-ci.sh
+git checkout -m origin/${BRANCH} install-ci.sh
 
 NEW_INSTALL_CI_SHA1SUM=$(my_sha ${SCRIPT_DIR}/install-ci.sh)
 RC=$?
@@ -242,3 +247,12 @@ if ! sudo diff ./libvirt/haproxy/haproxy_$(hostname).cfg /etc/haproxy/haproxy.cf
 then
 	restart_haproxy
 fi
+
+FILENAME="./libvirt/tunnel/profile_$(hostname).yaml"
+CLUSTER_ID=$(yq eval '.profile.cluster_id' ${FILENAME})
+declare -a BASTION_SSH_PORTS=( 1023 1033 1043 1053 1063 1073 )
+for I in ${BASTION_SSH_PORTS[*]}
+do
+	sudo firewall-cmd --permanent --zone=libvirt --add-port=$(( ${I} + ${CLUSTER_ID} ))/tcp || true
+done
+sudo firewall-cmd --reload || true

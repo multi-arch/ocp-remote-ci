@@ -15,3 +15,21 @@ http:
 https:
   bastion-port: 8443
   target-port: 443
+bastion0ssh:
+  bastion-port: 1023
+  target-port: 22
+bastion1ssh:
+  bastion-port: 1033
+  target-port: 22
+bastion2ssh:
+  bastion-port: 1043
+  target-port: 22
+bastion3ssh:
+  bastion-port: 1053
+  target-port: 22
+bastion4ssh:
+  bastion-port: 1063
+  target-port: 22
+bastion5ssh:
+  bastion-port: 1073
+  target-port: 22

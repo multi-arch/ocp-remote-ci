@@ -9,24 +9,34 @@ API_PORT=6443
 HTTP_PORT=80
 HTTPS_PORT=443
 
-for f in profile_*.yaml ; do filename=${f};
- if [[ ! -f ${filename} ]]; then
- 	echo "${filename} file missing"
-   exit 0
- fi
-ARCH=$(yq eval '.profile.arch' ${filename})
-CLUSTER_CAPACITY=$(yq eval '.profile.cluster_capacity' ${filename})
-CLUSTER_ID=$(yq eval '.profile.cluster_id' ${filename})
+#set -x
+declare -a BASTION_SSH_PORTS=( 1023 1033 1043 1053 1063 1073 )
 
-# libvirt ports
-yq eval -i '.libvirt.bastion-port='$(( $LIBVIRT_PORT + $CLUSTER_ID ))'' ${filename}
-yq eval -i '.libvirt.target-port='$LIBVIRT_PORT'' ${filename}
+for FILENAME in profile_*.yaml
+do
+	if [[ ! -f ${FILENAME} ]]
+	then
+		echo "${FILENAME} file missing"
+		exit 0
+	fi
 
-yq eval -i '.api.bastion-port='$(($API_PORT + $CLUSTER_ID))'' ${filename}
-yq eval -i '.api.target-port='$(($API_PORT))'' ${filename}
-yq eval -i '.http.bastion-port='$(($HTTP_PORT + $CLUSTER_ID + 8000 ))'' ${filename}
-yq eval -i '.http.target-port='$(($HTTP_PORT))'' ${filename}
-yq eval -i '.https.bastion-port='$(($HTTPS_PORT + $CLUSTER_ID + 8000 ))'' ${filename}
-yq eval -i '.https.target-port='$(($HTTPS_PORT))'' ${filename}
+	ARCH=$(yq eval '.profile.arch' ${FILENAME})
+	CLUSTER_CAPACITY=$(yq eval '.profile.cluster_capacity' ${FILENAME})
+	CLUSTER_ID=$(yq eval '.profile.cluster_id' ${FILENAME})
 
+	# libvirt ports
+	yq eval -i '.libvirt.bastion-port='$((${LIBVIRT_PORT} + ${CLUSTER_ID})) ${FILENAME}
+	yq eval -i '.libvirt.target-port='${LIBVIRT_PORT} ${FILENAME}
+	yq eval -i '.api.bastion-port='$((${API_PORT} + ${CLUSTER_ID})) ${FILENAME}
+	yq eval -i '.api.target-port='${API_PORT} ${FILENAME}
+	yq eval -i '.http.bastion-port='$((${HTTP_PORT} + ${CLUSTER_ID} + 8000)) ${FILENAME}
+	yq eval -i '.http.target-port='${HTTP_PORT} ${FILENAME}
+	yq eval -i '.https.bastion-port='$((${HTTPS_PORT} + ${CLUSTER_ID} + 8000)) ${FILENAME}
+	yq eval -i '.https.target-port='${HTTPS_PORT} ${FILENAME}
+	for CLUSTER_NUM in $(seq 0 ${CLUSTER_CAPACITY})
+	do
+		SSH_PORT=${BASTION_SSH_PORTS[${CLUSTER_NUM}]}
+		yq eval -i '.bastion'${CLUSTER_NUM}'ssh.bastion-port='$((${SSH_PORT} + ${CLUSTER_ID})) ${FILENAME}
+		yq eval -i '.bastion'${CLUSTER_NUM}'ssh.target-port=22' ${FILENAME}
+	done
 done

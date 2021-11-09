@@ -16,17 +16,17 @@ https:
   bastion-port: 8445
   target-port: 443
 bastion0ssh:
-  bastion-port: 1025
-  target-port: 22
-bastion1ssh:
   bastion-port: 1035
   target-port: 22
-bastion2ssh:
+bastion1ssh:
   bastion-port: 1045
   target-port: 22
-bastion3ssh:
+bastion2ssh:
   bastion-port: 1055
   target-port: 22
-bastion4ssh:
+bastion3ssh:
   bastion-port: 1065
+  target-port: 22
+bastion4ssh:
+  bastion-port: 1075
   target-port: 22

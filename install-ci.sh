@@ -250,7 +250,7 @@ fi
 
 FILENAME="./libvirt/tunnel/profile_$(hostname).yaml"
 CLUSTER_ID=$(yq eval '.profile.cluster_id' ${FILENAME})
-declare -a BASTION_SSH_PORTS=( 1023 1033 1043 1053 1063 1073 )
+declare -a BASTION_SSH_PORTS=( 1033 1043 1053 1063 1073 1083 )
 for I in ${BASTION_SSH_PORTS[*]}
 do
 	sudo firewall-cmd --permanent --zone=libvirt --add-port=$(( ${I} + ${CLUSTER_ID} ))/tcp || true

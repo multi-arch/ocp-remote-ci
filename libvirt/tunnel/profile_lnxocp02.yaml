@@ -1,6 +1,6 @@
 profile:
   arch: "s390x"
-  cluster_capacity: 5
+  cluster_capacity: 4
   cluster_id: 1
   environment: "bastion-z"
 libvirt:
@@ -29,7 +29,4 @@ bastion3ssh:
   target-port: 22
 bastion4ssh:
   bastion-port: 1074
-  target-port: 22
-bastion5ssh:
-  bastion-port: 1084
   target-port: 22

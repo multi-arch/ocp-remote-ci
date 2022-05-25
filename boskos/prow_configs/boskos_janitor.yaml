@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boskos-janitor-nongke
+  labels:
+    app: boskos-janitor-nongke
+  namespace: test-pods
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: boskos-janitor-nongke
+  template:
+    metadata:
+      labels:
+        app: boskos-janitor-nongke
+    spec:
+      terminationGracePeriodSeconds: 300
+      containers:
+      - name: boskos-janitor-nongke
+        image: quay.io/bgirriam/janitor:v20220208-21245b5
+        args:
+        - --boskos-url=http://boskos.test-pods.svc.cluster.local.
+        - --resource-type=libvirt-ppc64le-quota-slice
+        - --janitor-path=/root/libvirt-ppc64le-janitor.sh
+        - --pool-size=20
+        - --
+        - --hours=0
+        volumeMounts:
+          - mountPath: "/root/libvirt-ppc64le-janitor.sh"
+            name: janitor-libvirt-ppc64le
+            subPath: "libvirt-ppc64le-janitor.sh"
+      volumes:
+        - name: janitor-libvirt-ppc64le
+          configMap:
+            name: janitor-libvirt-ppc64le
+            defaultMode: 0755

@@ -1,0 +1,77 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: resources
+  namespace: test-pods
+data:
+  boskos-resources.yaml: |
+    resources:
+      - type: "libvirt-ppc64le-quota-slice"
+        state: dirty
+        names:
+        - "libvirt-ppc64le-0-0"
+        - "libvirt-ppc64le-0-1"
+        - "libvirt-ppc64le-0-2"
+        - "libvirt-ppc64le-0-3"
+        - "libvirt-ppc64le-1-0"
+        - "libvirt-ppc64le-1-1"
+        - "libvirt-ppc64le-1-2"
+        - "libvirt-ppc64le-2-0"
+        - "libvirt-ppc64le-2-1"
+        - "libvirt-ppc64le-2-2"
+        - "libvirt-ppc64le-2-3"
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: janitor-libvirt-ppc64le
+  namespace: test-pods
+data:
+  libvirt-ppc64le-janitor.sh: |-
+    #!/bin/bash
+
+    set -o errexit
+    set -o nounset
+    set -o pipefail
+
+    ARCH=$(uname -m)
+
+
+    LIBVIRT_VERSION=${LIBVIRT_VERSION:-"v1.0.1-alpha"}
+    ARCH=$(uname -m)
+    install_libvirtcli(){
+        if ! command -h libvirtcli &> /dev/null; then
+            echo "libvirtcli command not found, installing it."
+            [ "${ARCH}" == "x86_64" ] && ARCH="amd64"
+            # Installing binaries from github releases
+            curl -fsL https://github.com/Basavaraju-G/janitor/releases/download/${LIBVIRT_VERSION}/libvirtcli-${ARCH} -o libvirtcli
+            chmod +x ./libvirtcli
+            mv ./libvirtcli /usr/bin
+        fi
+    }
+
+
+
+    main(){
+
+        args=$1
+        case $1 in
+                -l=*|--slice=*)
+                        leasedResource="${1#*=}"
+                        shift
+                        ;;
+                -*|--*)
+                        echo "Unknown option $1"
+                        exit 1
+                        ;;
+                *)
+                        ;;
+        esac
+        install_libvirtcli
+        # Deleting the libvirt resources
+        libvirtcli -leasedResource "${leasedResource}"
+        [ $? = 0 ] && echo "Succesfully deleted resources in ${leasedResource}"
+
+    }
+
+    main $@

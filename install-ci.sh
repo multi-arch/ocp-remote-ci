@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 set -xeu
 
+APICI_BUILD01="\<apici_build01\>"
+APICI_BUILD02="\<apici_build02\>"
+declare -a APICIS=( apici_build01 apici_build02 )
+
 function restart_apici ()
 {
-	local -a APICIS=( apici_build01 apici_build02 )
-
 	for APICI in ${APICIS[@]}
 	do
 		sudo systemctl stop ${APICI}.service || true
@@ -71,25 +73,46 @@ case ${NAMESPACE} in
 		exit 1
 	;;
 esac
-if [[ ! -v LOGIN_TOKEN_B01 ]]
+
+# If APICI_SINGLE is set then validate and reset APICIS array to this CI
+if [[ -n ${APICI_SINGLE:-""} ]]
 then
-	echo "ERROR: LOGIN_TOKEN_B01 environment variable must be set!"
-	exit 1
+	APICIVALUE="\<${APICI_SINGLE}\>"
+	if [[ ${APICIS[*]} =~ ${APICIVALUE} ]]
+	then
+		APICIS=( "${APICI_SINGLE}" )
+	else
+		echo "ERROR: Invalid APICI_SINGLE value of ${APICI_SINGLE}"
+		exit 1
+	fi
 fi
-if [[ -z "${LOGIN_TOKEN_B01}" ]]
+
+
+if [[ ${APICIS[*]} =~ $APICI_BUILD01 ]]
 then
-	echo "ERROR: LOGIN_TOKEN_B01 environment variable must have a value!"
-	exit 1
+	if [[ ! -v LOGIN_TOKEN_B01 ]]
+	then
+		echo "ERROR: LOGIN_TOKEN_B01 environment variable must be set!"
+		exit 1
+	fi
+	if [[ -z "${LOGIN_TOKEN_B01}" ]]
+	then
+		echo "ERROR: LOGIN_TOKEN_B01 environment variable must have a value!"
+		exit 1
+	fi
 fi
-if [[ ! -v LOGIN_TOKEN_B02 ]]
+if [[ ${APICIS[*]} =~ $APICI_BUILD02 ]]
 then
-	echo "ERROR: LOGIN_TOKEN_B02 environment variable must be set!"
-	exit 1
-fi
-if [[ -z "${LOGIN_TOKEN_B02}" ]]
-then
-	echo "ERROR: LOGIN_TOKEN_B02 environment variable must have a value!"
-	exit 1
+	if [[ ! -v LOGIN_TOKEN_B02 ]]
+	then
+		echo "ERROR: LOGIN_TOKEN_B02 environment variable must be set!"
+		exit 1
+	fi
+	if [[ -z "${LOGIN_TOKEN_B02}" ]]
+	then
+		echo "ERROR: LOGIN_TOKEN_B02 environment variable must have a value!"
+		exit 1
+	fi
 fi
 
 declare -a PROGRAMS=( git oc jq )
@@ -149,28 +172,33 @@ function get_token ()
 	return 0
 }
 
-TOKEN_B01=$(get_token ${LOGIN_TOKEN_B01} "https://api.build01.ci.devcluster.openshift.com:6443")
-RC=$?
-if [ ${RC} -gt 0 ]
+if [[ ${APICIS[*]} =~ $APICI_BUILD01 ]]
 then
-	exit 1
+	TOKEN_B01=$(get_token ${LOGIN_TOKEN_B01} "https://api.build01.ci.devcluster.openshift.com:6443")
+	RC=$?
+	if [ ${RC} -gt 0 ]
+	then
+		exit 1
+	fi
 fi
 
-TOKEN_B02=$(get_token ${LOGIN_TOKEN_B02} "https://api.build02.gcp.ci.openshift.org:6443")
-RC=$?
-if [ ${RC} -gt 0 ]
+if [[ ${APICIS[*]} =~ $APICI_BUILD02 ]]
 then
-	exit 1
+	TOKEN_B02=$(get_token ${LOGIN_TOKEN_B02} "https://api.build02.gcp.ci.openshift.org:6443")
+	RC=$?
+	if [ ${RC} -gt 0 ]
+	then
+		exit 1
+	fi
 fi
-
 declare -a LIBVIRT_FILES
 declare -a LIBVIRT_FILES_OLD_SHA
 
-LIBVIRT_FILES=(
-"libvirt/tunnel/apici_build01.service"
-"libvirt/tunnel/apici_build02.service"
-"libvirt/tunnel/tunnel.sh"
-)
+LIBVIRT_FILES=("libvirt/tunnel/tunnel.sh")
+for APICI in ${APICIS[@]}
+do
+	LIBVIRT_FILES+=("libvirt/tunnel/$APICI.service")
+done
 
 case ${NAMESPACE} in
 	"bastion-ppc64le-libvirt")
@@ -227,8 +255,14 @@ fi
 
 git pull
 
-sed -i -e 's,TOKEN=__,TOKEN='${TOKEN_B01}',' libvirt/tunnel/apici_build01.service
-sed -i -e 's,TOKEN=__,TOKEN='${TOKEN_B02}',' libvirt/tunnel/apici_build02.service
+if [[ ${APICIS[*]} =~ $APICI_BUILD01 ]]
+then
+	sed -i -e 's,TOKEN=__,TOKEN='${TOKEN_B01}',' libvirt/tunnel/apici_build01.service
+fi
+if [[ ${APICIS[*]} =~ $APICI_BUILD02 ]]
+then
+	sed -i -e 's,TOKEN=__,TOKEN='${TOKEN_B02}',' libvirt/tunnel/apici_build02.service
+fi
 
 declare -a LIBVIRT_FILES_NEW_SHA
 

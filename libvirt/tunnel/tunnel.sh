@@ -47,7 +47,7 @@ PORTS+=" -R $(yq eval '.https.bastion-port' ${filename}):127.0.0.1:$(yq eval '.h
 
 declare -a BASTION_ADDRS=( "192.168.126.10" "192.168.1.10" "192.168.2.10" "192.168.3.10" "192.168.4.10" "192.168.6.10" )
 
-for CLUSTER_NUM in $(seq 0 ${CLUSTER_CAPACITY})
+for CLUSTER_NUM in $(seq 0 $((CLUSTER_CAPACITY-1)) )
 do
 	BASTION_SSH=".bastion${CLUSTER_NUM}ssh"
 	BASTION_ADDR=${BASTION_ADDRS[${CLUSTER_NUM}]}

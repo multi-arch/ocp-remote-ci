@@ -12,7 +12,7 @@ func main() {
 	var (
 	   arch, leasedResource string
 	   REMOTE_LIBVIRT_URI string
-	   REMOTE_LIBVIRT_HOSTNAME, REMOTE_LIBVIRT_HOSTNAME_1, REMOTE_LIBVIRT_HOSTNAME_2 string
+	   REMOTE_LIBVIRT_HOSTNAME, REMOTE_LIBVIRT_HOSTNAME_1, REMOTE_LIBVIRT_HOSTNAME_2, REMOTE_LIBVIRT_HOSTNAME_3, REMOTE_LIBVIRT_HOSTNAME_4, REMOTE_LIBVIRT_HOSTNAME_5, REMOTE_LIBVIRT_HOSTNAME_6 string
 	)
 	// check lease name
 	flag.StringVar(&leasedResource, "leasedResource", "", "enter leased resource name")
@@ -54,21 +54,24 @@ func main() {
 		REMOTE_LIBVIRT_HOSTNAME := "lnxocp01"
 		REMOTE_LIBVIRT_HOSTNAME_1 := "lnxocp02"
 		REMOTE_LIBVIRT_HOSTNAME_2 := "lnxocp06"
+		REMOTE_LIBVIRT_HOSTNAME_3 := "lnxocp03"
+		REMOTE_LIBVIRT_HOSTNAME_4 := "lnxocp05"
+		REMOTE_LIBVIRT_HOSTNAME_5 := "lnxocp07"
+		REMOTE_LIBVIRT_HOSTNAME_6 := "lnxocp08"
 		LIBVIRT_HOSTS["libvirt-s390x-0-0"] = REMOTE_LIBVIRT_HOSTNAME
                 LIBVIRT_HOSTS["libvirt-s390x-0-1"] = REMOTE_LIBVIRT_HOSTNAME
-                LIBVIRT_HOSTS["libvirt-s390x-0-2"] = REMOTE_LIBVIRT_HOSTNAME
-                LIBVIRT_HOSTS["libvirt-s390x-0-3"] = REMOTE_LIBVIRT_HOSTNAME
-                LIBVIRT_HOSTS["libvirt-s390x-0-4"] = REMOTE_LIBVIRT_HOSTNAME
                 LIBVIRT_HOSTS["libvirt-s390x-1-0"] = REMOTE_LIBVIRT_HOSTNAME_1
                 LIBVIRT_HOSTS["libvirt-s390x-1-1"] = REMOTE_LIBVIRT_HOSTNAME_1
-                LIBVIRT_HOSTS["libvirt-s390x-1-2"] = REMOTE_LIBVIRT_HOSTNAME_1
-                LIBVIRT_HOSTS["libvirt-s390x-1-3"] = REMOTE_LIBVIRT_HOSTNAME_1
-                LIBVIRT_HOSTS["libvirt-s390x-1-4"] = REMOTE_LIBVIRT_HOSTNAME_1
                 LIBVIRT_HOSTS["libvirt-s390x-2-0"] = REMOTE_LIBVIRT_HOSTNAME_2
                 LIBVIRT_HOSTS["libvirt-s390x-2-1"] = REMOTE_LIBVIRT_HOSTNAME_2
-                LIBVIRT_HOSTS["libvirt-s390x-2-2"] = REMOTE_LIBVIRT_HOSTNAME_2
-                LIBVIRT_HOSTS["libvirt-s390x-2-3"] = REMOTE_LIBVIRT_HOSTNAME_2
-                LIBVIRT_HOSTS["libvirt-s390x-2-4"] = REMOTE_LIBVIRT_HOSTNAME_2
+                LIBVIRT_HOSTS["libvirt-s390x-3-0"] = REMOTE_LIBVIRT_HOSTNAME_3
+                LIBVIRT_HOSTS["libvirt-s390x-3-1"] = REMOTE_LIBVIRT_HOSTNAME_3
+                LIBVIRT_HOSTS["libvirt-s390x-4-0"] = REMOTE_LIBVIRT_HOSTNAME_4
+                LIBVIRT_HOSTS["libvirt-s390x-4-1"] = REMOTE_LIBVIRT_HOSTNAME_4
+                LIBVIRT_HOSTS["libvirt-s390x-5-0"] = REMOTE_LIBVIRT_HOSTNAME_5
+                LIBVIRT_HOSTS["libvirt-s390x-5-1"] = REMOTE_LIBVIRT_HOSTNAME_5
+                LIBVIRT_HOSTS["libvirt-s390x-6-0"] = REMOTE_LIBVIRT_HOSTNAME_6
+                LIBVIRT_HOSTS["libvirt-s390x-6-1"] = REMOTE_LIBVIRT_HOSTNAME_6
 
 	}
 

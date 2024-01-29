@@ -1,0 +1,23 @@
+profile:
+  arch: "s390x"
+  cluster_capacity: 2
+  cluster_id: 4
+  environment: "bastion-z"
+libvirt:
+  bastion-port: 16513
+  target-port: 16509
+api:
+  bastion-port: 6447
+  target-port: 6443
+http:
+  bastion-port: 8084
+  target-port: 80
+https:
+  bastion-port: 8447
+  target-port: 443
+bastion0ssh:
+  bastion-port: 1037
+  target-port: 22
+bastion1ssh:
+  bastion-port: 1047
+  target-port: 22

@@ -43,3 +43,15 @@ profile:
   cluster_id: {cluster_id}
   environment: "{env_name}"
 ```
+
+## Generate leases network json
+
+To generate the ```libvirt-${arch}.json``` files for your profiles:
+1. Ensure that each of the ```profile_${HOSTNAME}.yaml``` have a valid profile.
+2. Execute the ```generate-leases-network-json.py``` script to update the ```libvirt-${arch}.json``` files with information about the hostname, subnet, IP addresses*, and MAC addresses*.
+* These are only used in UPI based deployments.
+3. Got to `https://vault.ci.openshift.org`, login with your SSO credentials, and select `kv`. You should see `libvirt-${arch}` entries. If not, reach out on `#forum-ocp-multi-arch-ci` in Red Hat internal slack to be given access.
+4. Select an architecture, and click on the corresponding `libvirt-${arch}` entry. Then, select `leases` followed by `Create a new version +`.
+5. Copy the contents of the generated ```libvirt-${arch}.json``` in its entity, click on the eye icon in the value (i.e. second column) of the row whose first column value is `leases`, and replace the contents of that text box with the contents of your clipboard.
+6. Finally, scroll to the bottom of the page and hit save. Then, hit save again.
+7. To verify that you entered the data correctly, you may need to reload the vault page before displaying the entries since it takes a second to propagate. 

@@ -3,6 +3,7 @@ profile:
   cluster_capacity: 4
   cluster_id: 2
   environment: "bastion-ppc64le-libvirt"
+  httpd_port: 8080
 libvirt:
   bastion-port: 16511
   target-port: 16509
@@ -26,7 +27,4 @@ bastion2ssh:
   target-port: 22
 bastion3ssh:
   bastion-port: 1065
-  target-port: 22
-bastion4ssh:
-  bastion-port: 1075
   target-port: 22

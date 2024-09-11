@@ -23,8 +23,12 @@ do
 	ARCH=$(yq eval '.profile.arch' ${FILENAME})
 	CLUSTER_CAPACITY=$(yq eval '.profile.cluster_capacity' ${FILENAME})
 	CLUSTER_ID=$(yq eval '.profile.cluster_id' ${FILENAME})
+        GENERATE_PORTS=$(yq eval '.profile.generate_ports' ${FILENAME})
+        if [[ "$GENERATE_PORTS" == "false" ]]; then
+          continue
+        fi
 
-	# libvirt ports
+        # libvirt ports
 	yq eval -i '.libvirt.bastion-port='$((${LIBVIRT_PORT} + ${CLUSTER_ID})) ${FILENAME}
 	yq eval -i '.libvirt.target-port='${LIBVIRT_PORT} ${FILENAME}
 	yq eval -i '.api.bastion-port='$((${API_PORT} + ${CLUSTER_ID})) ${FILENAME}
@@ -33,7 +37,7 @@ do
 	yq eval -i '.http.target-port='${HTTP_PORT} ${FILENAME}
 	yq eval -i '.https.bastion-port='$((${HTTPS_PORT} + ${CLUSTER_ID} + 8000)) ${FILENAME}
 	yq eval -i '.https.target-port='${HTTPS_PORT} ${FILENAME}
-	for CLUSTER_NUM in $(seq 0 ${CLUSTER_CAPACITY})
+	for CLUSTER_NUM in $(seq 0 $((${CLUSTER_CAPACITY}-1)))
 	do
 		SSH_PORT=${BASTION_SSH_PORTS[${CLUSTER_NUM}]}
 		yq eval -i '.bastion'${CLUSTER_NUM}'ssh.bastion-port='$((${SSH_PORT} + ${CLUSTER_ID})) ${FILENAME}

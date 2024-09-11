@@ -47,11 +47,21 @@ def build_network(networks, filename):
                 "Couldn't find cluster_capacity for profile: {0}", profile))
             logging.exception(exc)
 
+        # Only set httpd_port if it's present (it's only needed for agent installs on ppc64le since it doesn't
+        # allow for large initrds
+        httpd_port = None
+        if 'httpd_port' in profile['profile']:
+            try:
+                httpd_port = profile['profile']['httpd_port']
+            except AttributeError as exc:
+                logging.error(str.format(
+                    "Couldn't set httpd_port for profile: {0}", profile))
+
         # Initialize arch-based dictionary
         if arch not in networks:
             networks[arch] = {}
 
-        if cluster_capacity <= 1:
+        if cluster_capacity <= 0:
             logging.warning(str.format(
                 "Profile {0} sets cluster capacity to 0. No leases will be created.", filename))
             return
@@ -67,6 +77,11 @@ def build_network(networks, filename):
                 'compute': [],
                 'bootstrap': []
             }
+
+            # Only set httpd port when set on profiles
+            if httpd_port:
+                networks[arch][lease]['httpd-port'] = httpd_port
+
             # Bootstrap Network
             networks[arch][lease]['bootstrap'].append({
                 'ip': str.format("192.168.{0}.{1}", networks[arch][lease]['subnet'], BOOSTRAP_OFFSET),

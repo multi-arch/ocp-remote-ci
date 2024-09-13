@@ -27,6 +27,3 @@ bastion2ssh:
 bastion3ssh:
   bastion-port: 1063
   target-port: 22
-bastion4ssh:
-  bastion-port: 1073
-  target-port: 22

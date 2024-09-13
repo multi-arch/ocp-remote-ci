@@ -33,7 +33,9 @@ sudo systemctl status apici.service
 To generate the associated ports for a new profile:
 1. Create a yaml file with name ```profile_${HOSTNAME}.yaml```.[1]
 2. Add the respective token, arch, cluster_capacity, cluster_id and environment.
-3. Execute the ```generate-ports.sh``` script to update the yaml file libvirt port configuration with the default values for libvirt, api, http and https using the cluster capacity and cluster id.
+3. If the environment will be running httpd (e.g. ppc64le to support agent-based installs), add an httpd_port.
+4. If you want to set the ports manually and not rely on the automation, set the key `generate_ports: false` in the profile.
+5. Execute the ```generate-ports.sh``` script to update the yaml file libvirt port configuration with the default values for libvirt, api, http and https using the cluster capacity and cluster id.
 
 [1] Sample ```profile_${HOSTNAME}.yaml``` file
 ```
@@ -54,4 +56,4 @@ To generate the ```libvirt-${arch}.json``` files for your profiles:
 4. Select an architecture, and click on the corresponding `libvirt-${arch}` entry. Then, select `leases` followed by `Create a new version +`.
 5. Copy the contents of the generated ```libvirt-${arch}.json``` in its entity, click on the eye icon in the value (i.e. second column) of the row whose first column value is `leases`, and replace the contents of that text box with the contents of your clipboard.
 6. Finally, scroll to the bottom of the page and hit save. Then, hit save again.
-7. To verify that you entered the data correctly, you may need to reload the vault page before displaying the entries since it takes a second to propagate. 
+7. To verify that you entered the data correctly, you may need to reload the vault page before displaying the entries since it takes a second to propagate.

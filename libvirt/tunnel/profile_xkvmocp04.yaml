@@ -3,6 +3,7 @@ profile:
   cluster_capacity: 0
   cluster_id: 10
   environment: "bastion-z"
+  generate_ports: false
 libvirt:
   bastion-port: 16520
   target-port: 16509
